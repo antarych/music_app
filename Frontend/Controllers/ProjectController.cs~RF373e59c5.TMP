@@ -1,0 +1,781 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text.RegularExpressions;
+using System.Web;
+using System.Web.Http;
+using System.Web.WebPages;
+using Frontend.Models;
+using Newtonsoft.Json;
+using ProjectManagement.Application;
+using ProjectManagement.Domain;
+using UserManagement.Application;
+using UserManagement.Domain;
+
+namespace Frontend.Controllers
+{
+    public class ProjectController : ApiController
+    {
+        private readonly IProjectManager _projectManager;
+        private readonly IUserManager _userManager;
+        private readonly IAuthorizer _authorizer;
+
+        public ProjectController(IProjectManager projectManager, IUserManager userManager, IAuthorizer authorizer)
+        {
+            _projectManager = projectManager;
+            _userManager = userManager;
+            _authorizer = authorizer;
+        }
+
+        [HttpPost]
+        [Route("projects")]
+        public IHttpActionResult CreateNewProject([FromBody]ProjectCreationModel prjCreationModel)
+        {
+            if (Request.Headers.Authorization == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+            var token = Request.Headers.Authorization.ToString();
+            var tokenString = token.Substring("Basic ".Length).Trim();
+
+
+            if (_authorizer.GetTokenInfo(tokenString) == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            CreateProjectRequest projectRequest;
+            try
+            {
+                projectRequest = new CreateProjectRequest(
+                    _authorizer.GetTokenInfo(tokenString).UserId,
+                    prjCreationModel.avatar,
+                    prjCreationModel.name,
+                    prjCreationModel.description,
+                    prjCreationModel.isFromOrganization,
+                    prjCreationModel.organizationId);                
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return BadRequest();
+            }
+            var createdProjectId = _projectManager.CreateProject(projectRequest);
+            if (prjCreationModel.tags != null)
+                _projectManager.AddTagsToProject(prjCreationModel.tags, createdProjectId);
+            return Ok(createdProjectId);
+        }
+
+        [HttpPut]
+        [Route("projects/{projectId}")]
+        public IHttpActionResult UpdateProject([FromUri] int projectId, [FromBody] ProjectUpdateModel prjUpdateModel)
+        {
+            if (Request.Headers.Authorization == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+            var token = Request.Headers.Authorization.ToString();
+            var tokenString = token.Substring("Basic ".Length).Trim();
+
+            var project = _projectManager.GetProject(projectId);
+
+            if (_authorizer.GetTokenInfo(tokenString) == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (project.Leader != _authorizer.GetTokenInfo(tokenString).UserId)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (prjUpdateModel.avatar != null) project.ProjectImage = prjUpdateModel.avatar;
+            if (prjUpdateModel.name != null) project.ProjectName = prjUpdateModel.name;
+            if (prjUpdateModel.description != null) project.ProjectDescription = prjUpdateModel.description;
+            if (prjUpdateModel.tags != null)
+                _projectManager.AddTagsToProject(prjUpdateModel.tags, project.ProjectId);
+            _projectManager.UpdateProject(project);
+            return Ok(new ProjectPresentation(project, _userManager.GetMembers(project)));
+        }
+
+        [HttpGet]
+        [Route("projects/{projectId}")]
+        public IHttpActionResult GetProject([FromUri] int projectId)
+        {
+            Project project;
+            try
+            {
+                project = _projectManager.GetProject(projectId);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return Content(HttpStatusCode.NotFound, "Project not found");
+            }
+            if (project == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Project not found");
+            }
+            IList<Account> members;
+            try
+            {
+                members = _userManager.GetMembers(project);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return Content(HttpStatusCode.NotFound, "Project not found");
+            }
+            return Ok(new ProjectPresentation(project, members));
+        }
+
+        [HttpGet]
+        [Route("projects/{projectId}/vacancies/{vacancyId}")]
+        public IHttpActionResult GetVacancy([FromUri] int vacancyId, int projectId)
+        {
+            Project project;
+            Vacancy vacancy;
+            try
+            {
+                project = _projectManager.GetProject(projectId);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return Content(HttpStatusCode.NotFound, "Project not found");
+            }
+            if (project == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Project not found");
+            }
+            try
+            {
+                vacancy = _projectManager.GetVacancy(vac => vac.VacancyId == vacancyId).SingleOrDefault();
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return Content(HttpStatusCode.NotFound, "Vacancy not found");
+            }
+            if (vacancy == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Vacancy not found");
+            }
+            var proj = _projectManager.GetProjects(prj => prj.Vacancies.Contains(vacancy)).SingleOrDefault();
+            if (proj == null)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+            if (proj.ProjectId != projectId)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+            var members = _userManager.GetMembers(project);
+            return Ok(new VacancyPresentation(vacancy, members));
+        }
+
+        [HttpPost]
+        [Route("projects/{projectId}/delete")]
+        public IHttpActionResult RemoveProject([FromUri] int projectId)
+        {
+            if (Request.Headers.Authorization == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+            var token = Request.Headers.Authorization.ToString();
+            var tokenString = token.Substring("Basic ".Length).Trim();
+
+            var project = _projectManager.GetProject(projectId);
+
+            if (_authorizer.GetTokenInfo(tokenString) == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (project.Leader != _authorizer.GetTokenInfo(tokenString).UserId)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+            try
+            {
+                var members = _userManager.GetMembers(project);
+                foreach (var vac in project.Vacancies)
+                {
+                    var userId = _userManager.GetAssignee(vac, members);
+                    _projectManager.RemoveVacancy(project, vac, userId);
+                }
+                _projectManager.RemoveProject(projectId);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return Content(HttpStatusCode.NotFound, "Project not found");
+            }
+            return Ok();
+        }
+
+        [HttpPut]
+        [Route("projects/{projectId}/vacancies/{vacancyId}/assign")]
+        public IHttpActionResult AddMemberToProject([FromUri] int vacancyId, int projectId, [FromBody] AssignUserModel userId)
+        {
+            if (Request.Headers.Authorization == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+            var token = Request.Headers.Authorization.ToString();
+            var tokenString = token.Substring("Basic ".Length).Trim();
+
+            var project = _projectManager.GetProject(projectId);
+
+            if (_authorizer.GetTokenInfo(tokenString) == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (project.Leader != _authorizer.GetTokenInfo(tokenString).UserId)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (_projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId)).SingleOrDefault() == null)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+
+            if (_projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId)).Single().ProjectId != projectId)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+            try
+            {
+                _projectManager.AddMemberToProject(vacancyId, userId.memberId);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return BadRequest();
+            }
+            catch (AccountNotFoundException ex)
+            {
+                return Content(HttpStatusCode.NotFound, ex.Message);
+            }
+            catch (VacancyNotFoundException ex)
+            {
+                return Content(HttpStatusCode.NotFound, ex.Message);
+            }
+            return Ok();
+        }
+
+        [HttpPost]
+        [Route("projects/{projectId}/vacancies/{vacancyId}/unassign")]
+        public IHttpActionResult RemoveMemberFromProject([FromUri] int vacancyId, int projectId)
+        {
+            if (Request.Headers.Authorization == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+            var token = Request.Headers.Authorization.ToString();
+            var tokenString = token.Substring("Basic ".Length).Trim();
+
+            var project = _projectManager.GetProject(projectId);
+
+            if (_authorizer.GetTokenInfo(tokenString) == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (project.Leader != _authorizer.GetTokenInfo(tokenString).UserId)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (
+                _projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId))
+                    .SingleOrDefault() == null)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+
+            if (
+                _projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId))
+                    .Single()
+                    .ProjectId != projectId)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+            IList<Account> members;
+            try
+            {
+                members = _userManager.GetMembers(project);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return Content(HttpStatusCode.NotFound, "Project not found");
+            }
+            try
+            {
+                var vacancy = _projectManager.GetVacancy(vac => vac.VacancyId == vacancyId).FirstOrDefault();
+                if (vacancy == null)
+                {
+                    return Content(HttpStatusCode.NotFound, "Vacancy not found");
+                }
+                var userId = _userManager.GetAssignee(vacancy, members);
+                if (userId != 0)
+                {
+                    _projectManager.RemoveMemberFromProject(vacancyId, userId);
+                }
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return BadRequest();
+            }
+            catch (AccountNotFoundException ex)
+            {
+                return Content(HttpStatusCode.NotFound, ex.Message);
+            }
+            catch (VacancyNotFoundException ex)
+            {
+                return Content(HttpStatusCode.NotFound, ex.Message);
+            }
+            return Ok();
+        }
+
+        [HttpPost]
+        [Route("projects/{projectId}/vacancies")]
+        public IHttpActionResult CreateNewVacancy([FromUri] int projectId, [FromBody] VacancyCreationModel vacancyModel)
+        {
+            if (Request.Headers.Authorization == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+            var token = Request.Headers.Authorization.ToString();
+            var tokenString = token.Substring("Basic ".Length).Trim();
+
+            var project = _projectManager.GetProject(projectId);
+
+            if (_authorizer.GetTokenInfo(tokenString) == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (project.Leader != _authorizer.GetTokenInfo(tokenString).UserId)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            var vacancy = new Vacancy(vacancyModel.profession);
+            vacancy.Description = vacancyModel.description;
+            int vacancyId;
+            try
+            {
+                vacancyId = _projectManager.CreateVacancy(projectId, vacancy);
+            }
+            catch (ProjectNotFoundException ex)
+            {
+                return Content(HttpStatusCode.NotFound, ex.Message);
+            }
+
+            if (vacancyModel.tags != null)
+            {
+                _projectManager.AddTagsToVacancy(vacancyModel.tags, vacancyId);
+            }
+
+            return Ok(vacancyId);
+        }
+
+        [HttpPut]
+        [Route("projects/{projectId}/vacancies/{vacancyId}")]
+        public IHttpActionResult UpdateVacancy([FromUri] int projectId, int vacancyId, [FromBody] VacancyUpdateModel vacancyModel)
+        {
+            if (Request.Headers.Authorization == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+            var token = Request.Headers.Authorization.ToString();
+            var tokenString = token.Substring("Basic ".Length).Trim();
+
+            var project = _projectManager.GetProject(projectId);
+
+            if (_authorizer.GetTokenInfo(tokenString) == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (project.Leader != _authorizer.GetTokenInfo(tokenString).UserId)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (
+                _projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId))
+                    .SingleOrDefault() == null)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+
+            if (
+                _projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId))
+                    .Single()
+                    .ProjectId != projectId)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+
+            var vacancy = _projectManager.GetVacancy(vac => vac.VacancyId == vacancyId).SingleOrDefault();
+
+            if (vacancy == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Vacancy not found");
+            }
+
+            if (vacancyModel.profession != null)
+            {
+                vacancy.Name = vacancyModel.profession;
+            }
+
+            if (vacancyModel.description != null)
+            {
+                vacancy.Description = vacancyModel.description;
+            }
+
+            if (vacancyModel.tags != null)
+            {
+                _projectManager.AddTagsToVacancy(vacancyModel.tags, vacancyId);
+            }
+
+            _projectManager.UpdateVacancy(vacancy);
+
+            return Ok(vacancyId);
+        }
+
+        [HttpPost]
+        [Route("projects/{projectId}/vacancies/{vacancyId}/delete")]
+        public IHttpActionResult RemoveVacancy([FromUri] int projectId, int vacancyId)
+        {
+            if (Request.Headers.Authorization == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+            var token = Request.Headers.Authorization.ToString();
+            var tokenString = token.Substring("Basic ".Length).Trim();
+
+            var project = _projectManager.GetProject(projectId);
+
+            if (project == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Project not found");
+            }
+
+            if (_authorizer.GetTokenInfo(tokenString) == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (project.Leader != _authorizer.GetTokenInfo(tokenString).UserId)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (
+                _projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId))
+                    .SingleOrDefault() == null)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+
+            if (
+                _projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId))
+                    .Single()
+                    .ProjectId != projectId)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+
+            var vacancy = _projectManager.GetVacancy(vac => vac.VacancyId == vacancyId).SingleOrDefault();
+
+            if (vacancy == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Vacancy not found");
+            }
+
+            IList<Account> members;
+            try
+            {
+                members = _userManager.GetMembers(project);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return Content(HttpStatusCode.NotFound, "Project not found");
+            }
+
+            var userId = _userManager.GetAssignee(vacancy, members);
+
+            _projectManager.RemoveVacancy(project, vacancy, userId);
+            return Ok();
+        }
+
+        [HttpPost]
+        [Route("project/{projectId}/vacancy/{vacancyId}/apply")]
+        public IHttpActionResult ApplyForVacancy([FromUri] int projectId, int vacancyId, [FromBody] string message)
+        {
+            if (Request.Headers.Authorization == null)
+            {
+                throw new UnauthorizedAccessException("Invalid token");
+            }
+            var token = Request.Headers.Authorization.ToString();
+            var tokenString = token.Substring("Basic ".Length).Trim();
+            if (!token.IsEmpty() && token.StartsWith("Basic"))
+            {
+                if (_authorizer.GetTokenInfo(tokenString) == null)
+                {
+                    throw new UnauthorizedAccessException("Invalid token");
+                }
+            }
+            var tokenInfo = _authorizer.GetTokenInfo(tokenString);
+            if (tokenInfo == null)
+            {
+                throw new UnauthorizedAccessException("Invalid token");
+            }
+
+            var project = _projectManager.GetProject(projectId);
+
+            if (project == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Project not found");
+            }
+
+            if (_authorizer.GetTokenInfo(tokenString) == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (project.Leader != _authorizer.GetTokenInfo(tokenString).UserId)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (
+                _projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId))
+                    .SingleOrDefault() == null)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+
+            if (
+                _projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId))
+                    .Single()
+                    .ProjectId != projectId)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+
+            var vacancy = _projectManager.GetVacancy(vac => vac.VacancyId == vacancyId).SingleOrDefault();
+
+            if (vacancy == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Vacancy not found");
+            }
+
+            try
+            {
+                var allUri = HttpContext.Current.Request.RawUrl;
+                var uri = allUri.Split('/');
+                var strUri = uri[0] + tokenInfo.UserId;
+                //var strUri = uri[0] + "/users/" + tokenInfo.UserId;
+                _userManager.ApplyForVacancy(project.Leader,
+                    _userManager.GetUser(tokenInfo.UserId).Email,
+                    new Uri(strUri),
+                    message);
+            }
+            catch (Exception e)
+            {
+
+            }
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("projects/{projectId}/vacancies/{vacancyId}/token")]
+        public IHttpActionResult GenerateVacancyToken([FromUri] int projectId, int vacancyId)
+        {
+            if (Request.Headers.Authorization == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+            var token = Request.Headers.Authorization.ToString();
+            var tokenString = token.Substring("Basic ".Length).Trim();
+
+            var project = _projectManager.GetProject(projectId);
+
+            if (project == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Project not found");
+            }
+
+            if (_authorizer.GetTokenInfo(tokenString) == null)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (project.Leader != _authorizer.GetTokenInfo(tokenString).UserId)
+            {
+                return Content(HttpStatusCode.Unauthorized, "Invalid token");
+            }
+
+            if (
+                _projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId))
+                    .SingleOrDefault() == null)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+
+            if (
+                _projectManager.GetProjects(prj => prj.Vacancies.Any(vaca => vaca.VacancyId == vacancyId))
+                    .Single()
+                    .ProjectId != projectId)
+            {
+                return Content(HttpStatusCode.BadRequest, "Vacancy doesn't belong to this project");
+            }
+
+            var vacancy = _projectManager.GetVacancy(vac => vac.VacancyId == vacancyId).SingleOrDefault();
+
+            if (vacancy == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Vacancy not found");
+            }
+            var vacToken = _projectManager.GenerateVacancyToken(vacancyId);
+
+            return Ok(new VacancyTokenPresentation(vacToken));
+        }
+
+        [HttpPost]
+        [Route("vacancies/applyByToken")]
+        public IHttpActionResult ApplyByToken([FromBody] VacancyTokenRequest vacToken)
+        {
+            AuthorizationTokenInfo tokenInfo;
+            try
+            {
+                tokenInfo = CheckToken();
+            }
+            catch (UnauthorizedAccessException e)
+            {
+                return Content(HttpStatusCode.Unauthorized, e.Message);
+            }
+
+            var vacancyToken = _projectManager.GetVacancyToken(vacToken.vacancyToken);
+            if (vacancyToken == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Invalid vacancy token");
+            }
+            var vacancy = _projectManager.GetVacancy(vac => vac.VacancyId == vacancyToken.VacancyId).SingleOrDefault();
+            if (vacancy == null)
+            {
+                return Content(HttpStatusCode.NotFound, "Vacancy not found");
+            }
+            _projectManager.AddMemberToProject(vacancy.VacancyId, tokenInfo.UserId);
+            _projectManager.RemoveVacancyToken(vacancyToken);
+            return Ok();
+        }
+
+        [HttpGet]
+        [Route("projects/search/{searchByPageString}")]
+        public IHttpActionResult FindPrjByTags([FromUri] string searchByPageString)
+        {
+            var allUri = HttpContext.Current.Request.RawUrl;
+            var stringToParse = allUri.Split('?');
+            if (stringToParse[1] == null)
+            {
+                return Content(HttpStatusCode.BadRequest, "Search request is empty");
+            }
+
+            var page = HttpUtility.ParseQueryString(stringToParse[1]).Get("page");
+            if (string.IsNullOrEmpty(page))
+            {
+                return Content(HttpStatusCode.BadRequest, "Page is null");
+            }
+            if (int.Parse(page) < 1)
+            {
+                return Content(HttpStatusCode.BadRequest, "Positive page required");
+            }
+            var str = HttpUtility.ParseQueryString(stringToParse[1]).Get("str");
+            var tags = HttpUtility.ParseQueryString(stringToParse[1]).Get("tags");
+            IList<string> deserializedTags = new List<string>();
+            if (tags != null)
+            {
+                deserializedTags = JsonConvert.DeserializeObject<string[]>(tags);
+            }
+            if (string.IsNullOrEmpty(str) && deserializedTags.Count == 0)
+            {
+                return Ok(new List<Project>());
+            }
+            var projects = new List<Project>();
+            var stringPattern = @"[\s\p{P}]";
+            if (deserializedTags.Count != 0)
+            {
+                projects = _projectManager.GetProjectsByTags(deserializedTags).ToList();
+                if (projects.Count != 0)
+                {
+                    projects = projects.FindAll(prj =>
+                        Regex.Split(prj.ProjectName, stringPattern).Any(st => st.StartsWith(str)));
+                }
+            }
+            else
+            {
+                projects = _projectManager.GetProjects().ToList().FindAll(prj =>
+                    Regex.Split(prj.ProjectName, stringPattern).Any(st => st.StartsWith(str, StringComparison.InvariantCultureIgnoreCase)));
+            }
+            var projectPresentation = new List<ProjectPresentation>();
+            foreach (var project in projects)
+            {
+                IList<Account> members;
+                members = _userManager.GetMembers(project);
+                projectPresentation.Add(new ProjectPresentation(project, members));
+            }
+            return Ok(projectPresentation);
+        }
+
+        
+
+        [HttpPost]
+        [Route("vacancies/search")]
+        public IHttpActionResult FindVacancyByTags([FromBody] TagListModel tagList)
+        {
+            var vacancies = _projectManager.GetVacanciesByTags(tagList.tags);
+            var vacancyPresentation = new List<VacancyPresentation>();
+            foreach (var vacancy in vacancies)
+            {
+                IList<Account> members;
+                var project = _projectManager.GetProjects(prj => prj.Vacancies.Contains(vacancy)).Single();
+                members = _userManager.GetMembers(project);
+                vacancyPresentation.Add(new VacancyPresentation(vacancy, members));
+            }
+            return Ok(vacancyPresentation);
+        }
+
+        private AuthorizationTokenInfo CheckToken()
+        {
+            if (Request.Headers.Authorization == null)
+            {
+                throw new UnauthorizedAccessException("Invalid token");
+            }
+            var token = Request.Headers.Authorization.ToString();
+            var tokenString = token.Substring("Basic ".Length).Trim();
+            if (!token.IsEmpty() && token.StartsWith("Basic"))
+            {
+                if (_authorizer.GetTokenInfo(tokenString) == null)
+                {
+                    throw new UnauthorizedAccessException("Invalid token");
+                }
+            }
+            var tokenInfo = _authorizer.GetTokenInfo(tokenString);
+            if (tokenInfo == null)
+            {
+                throw new UnauthorizedAccessException("Invalid token");
+            }
+            return tokenInfo;
+        }
+    }
+}
