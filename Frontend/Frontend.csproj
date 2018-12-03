@@ -204,6 +204,7 @@
     <Compile Include="Models\LoginInformation.cs" />
     <Compile Include="Models\ProfileIsNotCompletedResponse.cs" />
     <Compile Include="Models\CurrentUserPresentation.cs" />
+    <Compile Include="Models\SongCreationModel.cs" />
     <Compile Include="Models\UserPresentation.cs" />
     <Compile Include="Models\UserRegistrationModel.cs" />
     <Compile Include="Models\UserUpdateModel.cs" />

@@ -1,15 +1,24 @@
-﻿using MusicManagement.Application;
+﻿using MusicManagement;
+using MusicManagement.Application;
 
 namespace UserManagement.Application
 {
     public interface IMusicManager
     {
-        int CreateArtist(CreateArtistRequest reauest);
+        int CreateArtist(CreateArtistRequest request);
 
-        //int CreateUser(CreateAccountRequest request);
+        Artist GetArtist(int artistId);
 
-        //void UpdateUser(Account account);
+        void UpdateArtist(Artist artist);
 
-        //IEnumerable<Account> GetAccounts(Func<Account, bool> predicate = null);
+        void DeleteArtist(int artistId);
+
+        int CreateSong(CreateSongRequest request);
+
+        Song GetSong(int songId);
+
+        void UpdateSong(Song song, string artistName);
+
+        void DeleteSong(int songId);
     }
 }

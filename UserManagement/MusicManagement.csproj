@@ -84,6 +84,7 @@
   <ItemGroup>
     <Compile Include="Application\CreateArtistRequest.cs" />
     <Compile Include="Application\CreateAccountRequest.cs" />
+    <Compile Include="Application\CreateSongRequest.cs" />
     <Compile Include="Application\IAuthorizer.cs" />
     <Compile Include="Application\IMusicManager.cs" />
     <Compile Include="Application\IUserManager.cs" />

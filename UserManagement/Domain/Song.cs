@@ -8,10 +8,12 @@ namespace MusicManagement
     {
         public Song(
             string name,
-            string text)
+            string text,
+            Artist artist)
         {
             Name = name;
             Text = text;
+            Artist = artist;
         }
 
         protected Song()
@@ -20,7 +22,7 @@ namespace MusicManagement
 
         public virtual int SongId { get; protected set; }
 
-        public virtual string Name { get; protected set; }
+        public virtual string Name { get; set; }
 
         public virtual string Text { get; set; }
 
