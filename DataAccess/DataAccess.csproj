@@ -91,6 +91,7 @@
     <Compile Include="Mappings\UserMap.cs" />
     <Compile Include="NHibernate\SessionProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Repositories\MusicRepository.cs" />
     <Compile Include="Repositories\UserRepository.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -104,9 +105,9 @@
       <Project>{af17b732-d253-4e00-90c6-d7434163cd1a}</Project>
       <Name>Common</Name>
     </ProjectReference>
-    <ProjectReference Include="..\UserManagement\UserManagement.csproj">
+    <ProjectReference Include="..\UserManagement\MusicManagement.csproj">
       <Project>{0b1742fd-9d35-433e-a988-e32c442949e5}</Project>
-      <Name>UserManagement</Name>
+      <Name>MusicManagement</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

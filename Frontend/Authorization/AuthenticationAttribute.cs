@@ -4,8 +4,8 @@ using System.Threading.Tasks;
 using System.Web.Http.Filters;
 using System.Web.Http.Results;
 using Journalist;
-using UserManagement.Application;
-using UserManagement.Domain;
+using MusicManagement.Application;
+using MusicManagement.Domain;
 
 namespace Frontend.Authorization
 {

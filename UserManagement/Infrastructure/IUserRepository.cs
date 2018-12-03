@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using UserManagement.Domain;
+using MusicManagement.Domain;
 
-namespace UserManagement.Infrastructure
+namespace MusicManagement.Infrastructure
 {
     public interface IUserRepository
     {

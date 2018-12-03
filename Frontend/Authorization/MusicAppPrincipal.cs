@@ -1,7 +1,7 @@
 ﻿
 using System.Security.Principal;
 using Journalist;
-using UserManagement.Domain;
+using MusicManagement.Domain;
 
 namespace Frontend.Authorization
 {

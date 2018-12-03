@@ -6,10 +6,13 @@ using DataAccess.Repositories;
 using FileManagement;
 using Frontend.App_Data;
 using SimpleInjector.Integration.WebApi;
-using UserManagement.Application;
-using UserManagement.Domain;
-using IUserRepository = UserManagement.Infrastructure.IUserRepository;
+using MusicManagement.Application;
+using MusicManagement.Domain;
+using IUserRepository = MusicManagement.Infrastructure.IUserRepository;
 using System;
+using UserManagement.Domain;
+using UserManagement.Application;
+using UserManagement.Infrastructure;
 
 namespace Frontend.App_Start
 {
@@ -30,7 +33,9 @@ namespace Frontend.App_Start
         private void SetupDependencies(Container container)
         {
             container.Register<IUserRepository>(() => container.GetInstance<UserRepository>(), Lifestyle.Singleton);
+            container.Register<IMusicRepository>(() => container.GetInstance<MusicRepository>(), Lifestyle.Singleton);
             container.Register<IUserManager>(() => container.GetInstance<UserManager>(), Lifestyle.Singleton);
+            container.Register<IMusicManager>(() => container.GetInstance<MusicManager>(), Lifestyle.Singleton);
             container.Register<ISessionProvider>(() => container.GetInstance<SessionProvider>(), Lifestyle.Singleton);          
             container.Register<IFileManager>(() => container.GetInstance<FileManager>(), Lifestyle.Singleton);
             container.Register<IAuthorizer>(() => new Authorizer(

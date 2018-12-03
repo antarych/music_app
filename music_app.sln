@@ -11,7 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastru
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{AF17B732-D253-4E00-90C6-D7434163CD1A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserManagement", "UserManagement\UserManagement.csproj", "{0B1742FD-9D35-433E-A988-E32C442949E5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicManagement", "UserManagement\MusicManagement.csproj", "{0B1742FD-9D35-433E-A988-E32C442949E5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAccess", "DataAccess\DataAccess.csproj", "{7C4E9A3C-5409-400E-89BF-5953A60CB5E2}"
 EndProject

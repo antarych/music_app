@@ -2,7 +2,7 @@
 using System;
 using Journalist;
 
-namespace UserManagement.Domain
+namespace MusicManagement.Domain
 {
     public class AuthorizationTokenInfo
     {

@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Common;
 using Journalist;
-using UserManagement.Application;
-using UserManagement.Infrastructure;
+using MusicManagement.Application;
+using MusicManagement.Infrastructure;
 
-namespace UserManagement.Domain
+namespace MusicManagement.Domain
 {
     public class Authorizer : IAuthorizer
     {        

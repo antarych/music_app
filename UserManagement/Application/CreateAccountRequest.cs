@@ -2,7 +2,7 @@
 using Journalist;
 
 
-namespace UserManagement.Application
+namespace MusicManagement.Application
 {
     public class CreateAccountRequest
     {

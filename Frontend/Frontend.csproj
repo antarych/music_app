@@ -194,10 +194,12 @@
     <Compile Include="Authorization\AuthenticationAttribute.cs" />
     <Compile Include="Controllers\AuthorizationController.cs" />
     <Compile Include="Controllers\FileController.cs" />
+    <Compile Include="Controllers\MusicController.cs" />
     <Compile Include="Controllers\UsersController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\ArtistCreationModel.cs" />
     <Compile Include="Models\ImageModel.cs" />
     <Compile Include="Models\LoginInformation.cs" />
     <Compile Include="Models\ProfileIsNotCompletedResponse.cs" />
@@ -237,9 +239,9 @@
       <Project>{45e60ca3-d7d4-498a-946b-629ac72b916a}</Project>
       <Name>FileManagement</Name>
     </ProjectReference>
-    <ProjectReference Include="..\UserManagement\UserManagement.csproj">
+    <ProjectReference Include="..\UserManagement\MusicManagement.csproj">
       <Project>{0b1742fd-9d35-433e-a988-e32c442949e5}</Project>
-      <Name>UserManagement</Name>
+      <Name>MusicManagement</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup>

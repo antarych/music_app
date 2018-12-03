@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Frontend.Models;
 
-namespace UserManagement.Domain
+namespace MusicManagement.Domain
 {
     public class CurrentUserPresentation
     {

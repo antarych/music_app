@@ -1,8 +1,8 @@
 ﻿using System;
 using Common;
-using UserManagement.Domain;
+using MusicManagement.Domain;
 
-namespace UserManagement.Application
+namespace MusicManagement.Application
 {
     public interface IAuthorizer
     {

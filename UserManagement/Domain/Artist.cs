@@ -1,18 +1,16 @@
 ﻿using System.Collections.Generic;
-using UserManagement.Domain;
+using MusicManagement.Domain;
 
-namespace UserManagement
+namespace MusicManagement
 {
     public class Artist
     {
         public Artist(
             string name,
-            string description,
-            string picture)
+            string description)
         {
             Name = name;
             Description = description;
-            Picture = picture;
         }
 
         protected Artist()

@@ -1,7 +1,7 @@
 ﻿using DataAccess.Mappings.Application;
 using NHibernate.Mapping.ByCode;
 using NHibernate.Mapping.ByCode.Conformist;
-using UserManagement;
+using MusicManagement;
 
 namespace DataAccess.Mappings
 {

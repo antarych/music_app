@@ -1,7 +1,7 @@
 ﻿
 using System.Collections.Generic;
 
-namespace UserManagement
+namespace MusicManagement
 {
     public class Genre
     {

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using DataAccess.NHibernate;
 using Journalist;
-using UserManagement.Infrastructure;
-using UserManagement.Domain;
+using MusicManagement.Infrastructure;
+using MusicManagement.Domain;
 using NHibernate.Linq;
 
 namespace DataAccess.Repositories

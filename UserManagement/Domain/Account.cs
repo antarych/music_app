@@ -4,7 +4,7 @@ using Common;
 using Journalist;
 using System.Net.Mail;
 
-namespace UserManagement.Domain
+namespace MusicManagement.Domain
 {
     public class Account
     {

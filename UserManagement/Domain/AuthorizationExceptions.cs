@@ -2,7 +2,7 @@
 using System.Runtime.Serialization;
 
 
-namespace UserManagement.Domain
+namespace MusicManagement.Domain
 {
     [Serializable]
     public class AccountNotFoundException : Exception

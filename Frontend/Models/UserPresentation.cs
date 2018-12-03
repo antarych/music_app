@@ -2,7 +2,7 @@
 using System.Linq;
 using Frontend.Models;
 
-namespace UserManagement.Domain
+namespace MusicManagement.Domain
 {
     public class UserPresentation
     {

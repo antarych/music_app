@@ -9,7 +9,7 @@ using System.Web.WebPages;
 using FileManagement;
 using Frontend.Authorization;
 using Journalist;
-using UserManagement.Domain;
+using MusicManagement.Domain;
 
 namespace Frontend.Controllers
 {

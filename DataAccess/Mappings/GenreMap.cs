@@ -1,4 +1,4 @@
-﻿using UserManagement;
+﻿using MusicManagement;
 using DataAccess.Mappings.Application;
 using NHibernate.Mapping.ByCode;
 using NHibernate.Mapping.ByCode.Conformist;

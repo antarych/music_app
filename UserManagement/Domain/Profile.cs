@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Common;
 
-namespace UserManagement.Domain
+namespace MusicManagement.Domain
 {
     public class Profile
     {

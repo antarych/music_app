@@ -2,8 +2,8 @@
 using System.Web.Http;
 using Common;
 using Frontend.Models;
-using UserManagement.Application;
-using UserManagement.Domain;
+using MusicManagement.Application;
+using MusicManagement.Domain;
 
 namespace Frontend.Controllers
 {
