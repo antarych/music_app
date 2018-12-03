@@ -36,5 +36,25 @@ namespace UserManagement.Domain
 
         public virtual Profile Profile { get; set; }
 
+        private ISet<Song> _songs;
+        public virtual ISet<Song> Songs
+        {
+            get
+            {
+                return _songs ?? (_songs = new HashSet<Song>());
+            }
+            set { _songs = value; }
+        }
+
+        private ISet<Artist> _artists;
+        public virtual ISet<Artist> Artists
+        {
+            get
+            {
+                return _artists ?? (_artists = new HashSet<Artist>());
+            }
+            set { _artists = value; }
+        }
+
     }
 }

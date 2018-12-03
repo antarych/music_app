@@ -84,6 +84,9 @@
   <ItemGroup>
     <Compile Include="Mappings\Application\MailAdressType.cs" />
     <Compile Include="Mappings\Application\PasswordType.cs" />
+    <Compile Include="Mappings\ArtistMap.cs" />
+    <Compile Include="Mappings\GenreMap.cs" />
+    <Compile Include="Mappings\SongMap.cs" />
     <Compile Include="NHibernate\ISessionProvider.cs" />
     <Compile Include="Mappings\UserMap.cs" />
     <Compile Include="NHibernate\SessionProvider.cs" />

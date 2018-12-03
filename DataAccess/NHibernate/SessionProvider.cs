@@ -21,6 +21,9 @@ namespace DataAccess.NHibernate
             configuration.Configure();
             var modelMapper = new ModelMapper();
             modelMapper.AddMapping<UserMap>();
+            modelMapper.AddMapping<ArtistMap>();
+            modelMapper.AddMapping<SongMap>();
+            modelMapper.AddMapping<GenreMap>();
             configuration.AddDeserializedMapping(modelMapper.CompileMappingForAllExplicitlyAddedEntities(), null);
 
             _factory = configuration.BuildSessionFactory();

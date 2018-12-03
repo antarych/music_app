@@ -31,6 +31,14 @@ namespace DataAccess.Mappings
                 m.Property(profile => profile.FavArtists, mapper => mapper.Column("NumberOfFavArtists"));
             });
             Property(user => user.RegistrationTime, mapper => mapper.Column("RegistrationDate"));
+            Set(user => user.Artists,
+                                c =>
+                                {
+                                    c.Cascade(Cascade.Persist);
+                                    c.Key(k => k.Column("UserId"));
+                                    c.Table("Artist_account");
+                                },
+                                r => r.ManyToMany(m => m.Column("ArtistId")));
         }
     }
 }
